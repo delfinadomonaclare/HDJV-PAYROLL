@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HDJV Payroll Calculator - Monakers Edition</title>
+    <script src="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans p-4 md:p-8">
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <div class="bg-gray-800 text-white p-6 rounded-lg shadow-lg flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold tracking-wide">MONAKERS PAYROLL CALCULATOR</h1>
+                <p class="text-sm text-gray-400">Exact Computation Logic based on HDJV Cut-off Sheet</p>
+            </div>
+            <span class="bg-blue-600 text-xs px-3 py-1 rounded-full uppercase tracking-wider font-semibold">Live Interactive</span>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-2">Month & Year</label>
+                <div class="flex space-x-2">
+                    <select id="selectMonth" onchange="onPeriodChange()" class="w-full border p-2.5 rounded bg-gray-50 border-gray-300 font-medium text-sm">
+                        <option value="0">January (31d)</option>
+                        <option value="1">February</option>
+                        <option value="2">March (31d)</option>
+                        <option value="3">April</option>
+                        <option value="4">May (31d)</option>
+                        <option value="5">June</option>
+                        <option value="6">July (31d)</option>
+                        <option value="7" selected>August (31d)</option>
+                        <option value="8">September</option>
+                        <option value="9">October (31d)</option>
+                        <option value="10">November</option>
+                        <option value="11">December (31d)</option>
+                    </select>
+                    <input type="number" id="selectYear" value="2026" onchange="onPeriodChange()" class="w-20 border p-2.5 rounded bg-gray-50 border-gray-300 text-center font-medium text-sm">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-2">Cut-off Period</label>
+                <select id="selectCutoff" onchange="onPeriodChange()" class="w-full border p-2.5 rounded bg-gray-50 border-gray-300 font-medium text-blue-700 text-sm">
+                    <option value="1">1st Cut-off (1st - 15th)</option>
+                    <option value="2" selected>2nd Cut-off (16th - End)</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-2">Saturday Rest Day</label>
+                <select id="selectSatRestDay" onchange="renderAttendanceTable()" class="w-full border p-2.5 rounded bg-green-50 border-green-500 font-bold text-green-800 text-sm">
+                    </select>
+            </div>
+
+            <div class="md:col-span-2">
+                <label class="block text-sm font-bold text-gray-700 mb-2">Fixed Monthly Rate (₱)</label>
+                <input type="number" id="monthlyRate" value="20000" oninput="updateRates(); calculatePayroll();" class="w-full border p-2.5 rounded bg-yellow-50 border-yellow-400 font-bold text-lg text-gray-800">
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Calculated Hourly & Daily Rates</h3>
+            <div class="grid grid-cols-2 md:grid-cols-7 gap-3 text-center">
+                <div class="p-3 bg-gray-50 rounded border border-gray-200">
+                    <p class="text-xs text-gray-500">Basic / hr</p>
+                    <p id="lblBasicRate" class="font-bold text-gray-800 text-sm">₱0.00</p>
+                </div>
+                <div class="p-3 bg-gray-50 rounded border border-gray-200">
+                    <p class="text-xs text-gray-500">Fixed OT / hr</p>
+                    <p id="lblFixedOTRate" class="font-bold text-gray-800 text-sm">₱0.00</p>
+                </div>
+                <div class="p-3 bg-gray-50 rounded border border-gray-200">
+                    <p class="text-xs text-gray-500">Ext Basic OT</p>
+                    <p id="lblExtBasicOTRate" class="font-bold text-gray-800 text-sm">₱0.00</p>
+                </div>
+                <div class="p-3 bg-gray-50 rounded border border-gray-200">
+                    <p class="text-xs text-gray-500">Ext OT OT</p>
+                    <p id="lblExtOTOTRate" class="font-bold text-gray-800 text-sm">₱0.00</p>
+                </div>
+                <div class="p-3 bg-green-50 rounded border border-green-200">
+                    <p class="text-xs text-green-700 font-semibold">Rest Day / hr</p>
+                    <p id="lblRestDayRate" class="font-bold text-green-800 text-sm">₱0.00</p>
+                </div>
+                <div class="p-3 bg-green-50 rounded border border-green-200">
+                    <p class="text-xs text-green-700 font-semibold">Restday OT / hr</p>
+                    <p id="lblRestDayOTRate" class="font-bold text-green-800 text-sm">₱0.00</p>
+                </div>
+                <div class="p-3 bg-blue-50 rounded border border-blue-200 col-span-2 md:col-span-1">
+                    <p class="text-xs text-blue-600 font-semibold">Per Day Total</p>
+                    <p id="lblPerDayRate" class="font-bold text-blue-700 text-sm">₱0.00</p>
+                    <p id="lblPerDayBreakdown" class="text-gray-500 text-xs mt-0.5">(8h: ₱0 + 2h OT: ₱0)</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="p-4 bg-gray-50 border-b flex justify-between items-center">
+                <h2 class="font-bold text-gray-700">Daily Attendance & Hours Worked Sheet</h2>
+                <div class="flex items-center space-x-2 text-xs">
+                    <span class="bg-green-600 text-white font-bold px-2.5 py-1 rounded-full">Green Header = Rest Day (Sun + Selected Sat)</span>
+                    <span class="bg-blue-600 text-white font-bold px-2.5 py-1 rounded-full">13 Days Rule Active (-1 Day Auto Off)</span>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs text-center border-collapse">
+                    <thead>
+                        <tr class="bg-gray-800 text-white" id="tableHeaderDays"></tr>
+                        <tr class="bg-gray-700 text-gray-200" id="tableHeaderDates"></tr>
+                    </thead>
+                    <tbody id="attendanceTbody" class="divide-y divide-gray-200"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="text-center">
+            <button onclick="calculatePayroll()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-3.5 rounded-lg shadow-lg text-base transition transform hover:-translate-y-0.5">
+                Calculate Gross, Deductions & Net Pay
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white p-6 rounded-lg shadow space-y-3">
+                <h3 class="font-bold text-gray-700 border-b pb-2">Gross Pay Breakdown</h3>
+                <div class="flex justify-between text-sm">
+                    <span class="text-gray-600">Basic Pay:</span>
+                    <span id="sumBasic" class="font-semibold">₱0.00</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span class="text-gray-600">Fixed OT Pay:</span>
+                    <span id="sumFixedOT" class="font-semibold">₱0.00</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span class="text-gray-600">External Basic OT:</span>
+                    <span id="sumExtBasicOT" class="font-semibold">₱0.00</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span class="text-gray-600">External OT OT:</span>
+                    <span id="sumExtOTOT" class="font-semibold">₱0.00</span>
+                </div>
+                <div class="flex justify-between text-sm text-green-700 font-medium">
+                    <span>Rest Day Pay:</span>
+                    <span id="sumRestDay" class="font-bold">₱0.00</span>
+                </div>
+                <div class="flex justify-between text-sm text-green-700 font-medium">
+                    <span>Rest Day OT Pay:</span>
+                    <span id="sumRestDayOT" class="font-bold">₱0.00</span>
+                </div>
+                <div class="flex justify-between text-base font-bold text-blue-700 pt-2 border-t">
+                    <span>Total Gross Pay:</span>
+                    <span id="sumGross">₱0.00</span>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow space-y-3">
+                <div class="flex justify-between items-center border-b pb-2">
+                    <h3 class="font-bold text-gray-700">Auto Deductions</h3>
+                    <span class="text-xs text-blue-600 font-semibold">Formula Active</span>
+                </div>
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-gray-600">SSS Regular:</span>
+                    <input type="number" id="dedSSS" readonly class="w-24 border p-1 text-right rounded font-semibold bg-gray-100 text-gray-800">
+                </div>
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-gray-600">SSS Provident Fund (PF):</span>
+                    <input type="number" id="dedSSSPF" readonly class="w-24 border p-1 text-right rounded font-semibold bg-gray-100 text-gray-800">
+                </div>
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-gray-600">PhilHealth:</span>
+                    <input type="number" id="dedPhil" readonly class="w-24 border p-1 text-right rounded font-semibold bg-gray-100 text-gray-800">
+                </div>
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-gray-600">HDMF (Pag-IBIG):</span>
+                    <input type="number" id="dedHDMF" readonly class="w-24 border p-1 text-right rounded font-semibold bg-gray-100 text-gray-800">
+                </div>
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-gray-600">Withholding Tax:</span>
+                    <input type="number" id="dedTax" readonly class="w-24 border p-1 text-right rounded font-semibold bg-gray-100 text-gray-800">
+                </div>
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-gray-600">Loans / Others:</span>
+                    <input type="number" id="dedLoans" value="0" oninput="calculatePayroll()" class="w-24 border p-1 text-right rounded font-semibold text-gray-800 bg-yellow-50 border-yellow-300">
+                </div>
+                <div class="flex justify-between text-base font-bold text-red-600 pt-2 border-t">
+                    <span>Total Deductions:</span>
+                    <span id="sumDeductions">₱0.00</span>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 text-white p-6 rounded-lg shadow flex flex-col justify-between">
+                <div>
+                    <h3 class="font-bold text-gray-300 border-b border-gray-700 pb-2">NET PAY AMOUNT</h3>
+                    <p class="text-xs text-gray-400 mt-2">Final Take-Home Pay after all deductions for this cut-off period.</p>
+                </div>
+                <div class="my-6 text-center">
+                    <p class="text-xs text-gray-400 uppercase tracking-widest">Take Home Pay</p>
+                    <h2 id="sumNetPay" class="text-4xl font-extrabold text-green-400 mt-1">₱0.00</h2>
+                </div>
+                <div class="text-xs text-center text-gray-400 border-t border-gray-700 pt-3">
+                    HDJV Payroll System • Verified Formula
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const dayNames = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+        let rates = {};
+
+        function updateRates() {
+            let monthly = parseFloat(document.getElementById('monthlyRate').value) || 0;
+            
+            let basicHourly = monthly / 252;
+            let fixedOT = basicHourly * 1.25;
+            let extBasicOT = basicHourly * 1.25;
+            let extOTOT = basicHourly * 1.5625;
+            let restDay = basicHourly * 1.30;
+            let restDayOT = basicHourly * 1.69;
+            
+            let basic8hrs = basicHourly * 8;
+            let fixedOT2hrs = fixedOT * 2;
+            let perDayTotal = basic8hrs + fixedOT2hrs;
+
+            rates = {
+                basic: basicHourly,
+                fixedOT: fixedOT,
+                extBasicOT: extBasicOT,
+                extOTOT: extOTOT,
+                restDay: restDay,
+                restDayOT: restDayOT,
+                perDay: perDayTotal
+            };
+
+            document.getElementById('lblBasicRate').innerText = '₱' + basicHourly.toFixed(2);
+            document.getElementById('lblFixedOTRate').innerText = '₱' + fixedOT.toFixed(2);
+            document.getElementById('lblExtBasicOTRate').innerText = '₱' + extBasicOT.toFixed(2);
+            document.getElementById('lblExtOTOTRate').innerText = '₱' + extOTOT.toFixed(2);
+            document.getElementById('lblRestDayRate').innerText = '₱' + restDay.toFixed(2);
+            document.getElementById('lblRestDayOTRate').innerText = '₱' + restDayOT.toFixed(2);
+            document.getElementById('lblPerDayRate').innerText = '₱' + perDayTotal.toFixed(2);
+            document.getElementById('lblPerDayBreakdown').innerText = `(8h: ₱${basic8hrs.toFixed(2)} + 2h OT: ₱${fixedOT2hrs.toFixed(2)})`;
+        }
+
+        function populateSaturdayDropdown() {
+            let month = parseInt(document.getElementById('selectMonth').value);
+            let year = parseInt(document.getElementById('selectYear').value);
+            let cutoff = parseInt(document.getElementById('selectCutoff').value);
+
+            let startDay = cutoff === 1 ? 1 : 16;
+            let endDay = cutoff === 1 ? 15 : new Date(year, month + 1, 0).getDate();
+
+            let satSelect = document.getElementById('selectSatRestDay');
+            satSelect.innerHTML = '';
+
+            let satFound = [];
+            for (let d = startDay; d <= endDay; d++) {
+                let dt = new Date(year, month, d);
+                if (dt.getDay() === 6) { // 6 = Saturday
+                    satFound.push(d);
+                }
+            }
+
+            if (satFound.length === 0) {
+                satSelect.innerHTML = '<option value="-1">No Saturday in Cut-off</option>';
+            } else {
+                satFound.forEach((d, idx) => {
+                    let opt = document.createElement('option');
+                    opt.value = d;
+                    if (month === 7 && cutoff === 2 && d === 29) {
+                        opt.selected = true; // Default for Aug 2nd cut off (Aug 29)
+                    } else if (idx === 0) {
+                        opt.selected = true;
+                    }
+                    opt.innerText = `Sat, Day ${d}`;
+                    satSelect.appendChild(opt);
+                });
+            }
+        }
+
+        function onPeriodChange() {
+            populateSaturdayDropdown();
+            renderAttendanceTable();
+        }
+
+        function renderAttendanceTable() {
+            updateRates();
+
+            let month = parseInt(document.getElementById('selectMonth').value);
+            let year = parseInt(document.getElementById('selectYear').value);
+            let cutoff = parseInt(document.getElementById('selectCutoff').value);
+            let selectedSatRestDay = parseInt(document.getElementById('selectSatRestDay').value);
+
+            let startDay = cutoff === 1 ? 1 : 16;
+            let lastDateOfMonth = new Date(year, month + 1, 0).getDate();
+            let endDay = cutoff === 1 ? 15 : lastDateOfMonth;
+
+            let trDays = '<th class="p-2 border border-gray-700 w-32 text-left">Category / Rate</th>';
+            let trDates = '<th class="p-2 border border-gray-600 text-left">Date</th>';
+
+            let daysList = [];
+            let totalRegDaysInCutoff = 0;
+            let lastRegDayDate = -1;
+
+            for (let d = startDay; d <= endDay; d++) {
+                let dt = new Date(year, month, d);
+                let dayName = dayNames[dt.getDay()];
+                let isSunday = (dt.getDay() === 0);
+                let isSatRestDay = (dt.getDay() === 6 && d === selectedSatRestDay);
+                let isRestDay = isSunday || isSatRestDay;
+
+                if (!isRestDay) {
+                    totalRegDaysInCutoff++;
+                    lastRegDayDate = d; // Track the last regular day
+                }
+
+                let bgClassDay = isRestDay ? 'bg-green-600 text-white font-bold' : '';
+                let bgClassDate = isRestDay ? 'bg-green-500 text-white font-bold' : '';
+
+                trDays += `<th class="p-2 border border-gray-700 ${bgClassDay}">${dayName}</th>`;
+                trDates += `<th class="p-2 border border-gray-600 ${bgClassDate}">${d}</th>`;
+                daysList.push({ day: d, isRestDay: isRestDay, isSunday: isSunday });
+            }
+
+            trDays += '<th class="p-2 border border-gray-700 bg-gray-900">TOTAL HRS</th>';
+            trDates += '<th class="p-2 border border-gray-600 bg-gray-900">AMOUNT</th>';
+
+            document.getElementById('tableHeaderDays').innerHTML = trDays;
+            document.getElementById('tableHeaderDates').innerHTML = trDates;
+
+            const categories = [
+                { id: 'catBasic', name: 'BASIC RATE' },
+                { id: 'catFixedOT', name: 'FIXED OT RATE' },
+                { id: 'catExtBasicOT', name: 'EXTERNAL BASIC OT' },
+                { id: 'catExtOTOT', name: 'EXTERNAL OT OT' },
+                { id: 'catRestDay', name: 'REST DAY' },
+                { id: 'catRestDayOT', name: 'RESTDAY OT' }
+            ];
+
+            let isAug2nd = (month === 7 && cutoff === 2);
+
+            let tbodyHtml = '';
+            categories.forEach(cat => {
+                tbodyHtml += `<tr class="hover:bg-gray-50">`;
+                tbodyHtml += `<td class="p-2 border font-bold text-left bg-gray-100 text-gray-700 text-xs">${cat.name}</td>`;
+
+                daysList.forEach(item => {
+                    let d = item.day;
+                    let val = '';
+
+                    // 13-DAY LOGIC MINUSAN NG 1 DAY:
+                    // Kapag umabot sa 13 regular days, ang huling regular day ay hindi lalagyan para maging 12 days lang.
+                    let isDeductedExtraDay = (totalRegDaysInCutoff >= 13 && d === lastRegDayDate);
+
+                    if (isAug2nd) {
+                        if (cat.id === 'catBasic' && !item.isRestDay) val = (d === 31 ? 13 : 8);
+                        if (cat.id === 'catFixedOT' && !item.isRestDay) val = 2;
+                        if (cat.id === 'catExtBasicOT' && (d === 18 || d === 19 || d === 24 || d === 27)) val = 2;
+                        if (cat.id === 'catRestDay' && item.isRestDay && d === 29) val = 8;
+                        if (cat.id === 'catRestDayOT' && item.isRestDay && d === 29) val = 2;
+                    } else {
+                        if (!isDeductedExtraDay) {
+                            if (cat.id === 'catBasic' && !item.isRestDay) val = 8;
+                            if (cat.id === 'catFixedOT' && !item.isRestDay) val = 2;
+                        }
+                    }
+
+                    tbodyHtml += `<td class="p-1 border ${item.isRestDay ? 'bg-green-50' : ''}">
+                        <input type="number" data-cat="${cat.id}" data-day="${d}" value="${val}" oninput="calculatePayroll()" class="w-10 text-center border p-1 rounded font-medium focus:ring-1 focus:ring-green-500">
+                    </td>`;
+                });
+
+                tbodyHtml += `<td class="p-2 border font-bold bg-gray-50" id="hrs_${cat.id}">0</td>`;
+                tbodyHtml += `</tr>`;
+            });
+
+            document.getElementById('attendanceTbody').innerHTML = tbodyHtml;
+            calculatePayroll();
+        }
+
+        function calculatePayroll() {
+            updateRates();
+
+            const sumCats = {
+                catBasic: { hrs: 0, rate: rates.basic, elSum: 'sumBasic' },
+                catFixedOT: { hrs: 0, rate: rates.fixedOT, elSum: 'sumFixedOT' },
+                catExtBasicOT: { hrs: 0, rate: rates.extBasicOT, elSum: 'sumExtBasicOT' },
+                catExtOTOT: { hrs: 0, rate: rates.extOTOT, elSum: 'sumExtOTOT' },
+                catRestDay: { hrs: 0, rate: rates.restDay, elSum: 'sumRestDay' },
+                catRestDayOT: { hrs: 0, rate: rates.restDayOT, elSum: 'sumRestDayOT' }
+            };
+
+            Object.keys(sumCats).forEach(catId => {
+                let inputs = document.querySelectorAll(`input[data-cat="${catId}"]`);
+                let totalHrs = 0;
+                inputs.forEach(inp => {
+                    let v = parseFloat(inp.value) || 0;
+                    totalHrs += v;
+                });
+                sumCats[catId].hrs = totalHrs;
+                let hrsEl = document.getElementById(`hrs_${catId}`);
+                if(hrsEl) hrsEl.innerText = totalHrs;
+
+                let amount = totalHrs * sumCats[catId].rate;
+                document.getElementById(sumCats[catId].elSum).innerText = '₱' + amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            });
+
+            let gross = (sumCats.catBasic.hrs * rates.basic) +
+                        (sumCats.catFixedOT.hrs * rates.fixedOT) +
+                        (sumCats.catExtBasicOT.hrs * rates.extBasicOT) +
+                        (sumCats.catExtOTOT.hrs * rates.extOTOT) +
+                        (sumCats.catRestDay.hrs * rates.restDay) +
+                        (sumCats.catRestDayOT.hrs * rates.restDayOT);
+
+            document.getElementById('sumGross').innerText = '₱' + gross.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+            // --- EXACT FORMULA-BASED DEDUCTIONS LOGIC ---
+            let cutoff = parseInt(document.getElementById('selectCutoff').value);
+
+            // 1. SSS Regular Deduction Formula
+            let sss = 0;
+            if (gross < 8500) sss = 0;
+            else if (gross < 9000) sss = 425;
+            else if (gross < 9500) sss = 450;
+            else if (gross < 10000) sss = 475;
+            else if (gross < 10500) sss = 500;
+            else if (gross < 11000) sss = 525;
+            else if (gross < 11500) sss = 550;
+            else if (gross < 12000) sss = 575;
+            else sss = 600;
+
+            // 2. SSS Provident Fund (SSSPF): =IF(AND(gross>=10000, cutoff=2), 125, 0)
+            let ssspf = (gross >= 10000 && cutoff === 2) ? 125 : 0;
+
+            // 3. PhilHealth: 250 per cut off
+            let phil = 250;
+
+            // 4. HDMF (Pag-IBIG): 1st cut off = 200, 2nd cut off = 0
+            let hdmf = (cutoff === 1) ? 200 : 0;
+
+            // 5. Withholding Tax: =IF(gross>=11000, 11.68, 0)
+            let tax = (gross >= 11000) ? 11.68 : 0;
+
+            // Display Computed Deductions in UI
+            document.getElementById('dedSSS').value = sss.toFixed(2);
+            document.getElementById('dedSSSPF').value = ssspf.toFixed(2);
+            document.getElementById('dedPhil').value = phil.toFixed(2);
+            document.getElementById('dedHDMF').value = hdmf.toFixed(2);
+            document.getElementById('dedTax').value = tax.toFixed(2);
+
+            let loans = parseFloat(document.getElementById('dedLoans').value) || 0;
+
+            let totalDeductions = sss + ssspf + phil + hdmf + tax + loans;
+            document.getElementById('sumDeductions').innerText = '₱' + totalDeductions.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+            let netPay = gross - totalDeductions;
+            document.getElementById('sumNetPay').innerText = '₱' + netPay.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+
+        window.onload = function() {
+            populateSaturdayDropdown();
+            renderAttendanceTable();
+        };
+    </script>
+</body>
+</html>
